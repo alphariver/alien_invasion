@@ -1,26 +1,49 @@
 import sys
+from time import sleep
 import pygame
 from settings import Settings
 from ship import Ship
 from bullet import Bullet
 from alien import Alien
+from star import Star
+from game_states import GameState
+from button import Button
+
 
 class AlienInvasion:
     def __init__(self):
         pygame.init()
         self.clock = pygame.time.Clock()
         self.settings = Settings()
+
+        #游戏启动后处于活动状态
+        self.active = False
         
         self.screen = pygame.display.set_mode(
             (self.settings.screen_width, self.settings.screen_height))
         #设置窗口标题
         pygame.display.set_caption("Alien Invasion litingzhang")
 
+        #创建一个用于存储游戏统计信息的实例
+        self.stats = GameState(self)
+
         self.ship = Ship(self)
         self.bullets = pygame.sprite.Group()
         self.aliens = pygame.sprite.Group()
+        self.stars = pygame.sprite.Group()
+        
+        self._create_stars()
 
         self._create_fleet()
+
+        #创建按钮
+        self.play_button = Button(self, "Play")
+
+    def _create_stars(self):
+        new_star = Star(self)
+
+        self.stars.add(new_star)
+
 
     def _create_alien(self, x_position, y_position):
         new_alien = Alien(self)
@@ -80,6 +103,25 @@ class AlienInvasion:
                 elif event.key == pygame.K_LEFT:
                     self.ship.moving_left = False
                 """
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                mouse_pos = pygame.mouse.get_pos()
+                self._check_play_button(mouse_pos)
+
+
+    def _check_play_button(self, mouse_pos):
+        button_clicked = self.play_button.rect.collidepoint(mouse_pos)
+        if button_clicked and not self.active:
+            self.stats.reset_stats()
+
+            self.active = True
+
+            #清空外星人列表和子弹列表
+            self.bullets.empty()
+            self.aliens.empty()
+            self.stars.empty()
+
+            #创建一个新的外星人舰队，将飞船放置在屏幕的底部中间
+            self.ship.center_ship()
 
 
 
@@ -91,6 +133,10 @@ class AlienInvasion:
 
         self.ship.blitme()
         self.aliens.draw(self.screen)
+        self.stars.draw(self.screen)
+
+        if not self.active :
+            self.play_button.draw_button()
 
         pygame.display.flip()
 
@@ -136,19 +182,73 @@ class AlienInvasion:
                 self._change_fleet_direction()
                 break
 
+    def _ship_hit(self):
+        if self.stats.ship_left > 0 :
+            #ship_left 减1
+            self.stats.ship_left -= 1
+
+            print(f"ship_left: {self.stats.ship_left}")
+
+            #清空外星人列表、子弹列表、星星列表
+            self.aliens.empty()
+            self.bullets.empty()
+            self.stars.empty()
+
+            #将飞船放在屏幕的底部中央
+            self.ship.center_ship()
+
+            # 暂停
+            sleep(0.5)
+        else:
+            self.active = False
+
+
+
+        
+
+
+
     def _update_aliens(self):
         #检查是否有外星人到达屏幕边缘
         self._check_fleet_edges()
 
         self.aliens.update()
 
+        #检测外星人和飞船是否发生碰撞
+        if pygame.sprite.spritecollideany(self.ship, self.aliens):
+            print("Ship hit!!!")
+            self._ship_hit()
+
+        #检测是否有外星人到达了屏幕下边缘
+        self._check_aliens_bottom()
+
+    
+    def _check_aliens_bottom(self):
+        for alien in self.aliens.sprites():
+            if alien.rect.bottom >= self.settings.screen_height:
+                #像飞船撞到了外人一样进行处理
+                self._ship_hit()
+                break
+
+
+
+    def _update_stars(self):
+        if pygame.sprite.spritecollideany(self.ship, self.stars):
+            print("ship get star")
+            self.stars.empty()
+
+
 
     def run_game(self):
         while True:
             self._check_event()
-            self.ship.update()
-            self._update_bullets()
-            self._update_aliens()
+
+            if self.active:
+                self.ship.update()
+                self._update_bullets()
+                self._update_aliens()
+                self._update_stars()
+
             self._update_screen()
             self.clock.tick(60)
 
