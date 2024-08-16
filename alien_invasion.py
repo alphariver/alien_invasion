@@ -8,6 +8,7 @@ from alien import Alien
 from star import Star
 from game_states import GameState
 from button import Button
+from scoreboard import ScoreBoard
 
 
 class AlienInvasion:
@@ -24,8 +25,9 @@ class AlienInvasion:
         #设置窗口标题
         pygame.display.set_caption("Alien Invasion litingzhang")
 
-        #创建一个用于存储游戏统计信息的实例
+        #创建一个用于存储游戏统计信息的实例, 并创建记分
         self.stats = GameState(self)
+        self.score_board = ScoreBoard(self)
 
         self.ship = Ship(self)
         self.bullets = pygame.sprite.Group()
@@ -112,16 +114,21 @@ class AlienInvasion:
         button_clicked = self.play_button.rect.collidepoint(mouse_pos)
         if button_clicked and not self.active:
             self.stats.reset_stats()
+            self.score_board.prep_score()
 
             self.active = True
 
             #清空外星人列表和子弹列表
             self.bullets.empty()
             self.aliens.empty()
-            self.stars.empty()
+            #self.stars.empty()
 
             #创建一个新的外星人舰队，将飞船放置在屏幕的底部中间
             self.ship.center_ship()
+
+            #还原游戏设置
+            self.settings.initialize_dynamic_settings()
+        
 
 
 
@@ -135,6 +142,9 @@ class AlienInvasion:
         self.aliens.draw(self.screen)
         self.stars.draw(self.screen)
 
+        #显示得分
+        self.score_board.show_score()
+
         if not self.active :
             self.play_button.draw_button()
 
@@ -147,11 +157,17 @@ class AlienInvasion:
     def _check_bullet_alien_collision(self):
         #检查是否有子弹击中了外星人
     
-        collisions = pygame.sprite.groupcollide(self.bullets, self.aliens, True, True)
+        collisions = pygame.sprite.groupcollide(self.bullets, self.aliens, self.settings.bullet_collision_dispear, True)
+
+        if collisions :
+            self.stats.score += self.settings.alien_score
+            self.score_board.prep_score()
+            self.score_board.check_high_score()
 
         if not self.aliens:
             self.bullets.empty()
             self._create_fleet()
+            self.settings.increase_speed()
 
 
     def _update_bullets(self):
@@ -236,6 +252,7 @@ class AlienInvasion:
         if pygame.sprite.spritecollideany(self.ship, self.stars):
             print("ship get star")
             self.stars.empty()
+            self.settings.bullet_collision_dispear = False
 
 
 
