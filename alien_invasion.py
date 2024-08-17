@@ -116,6 +116,8 @@ class AlienInvasion:
             self.stats.reset_stats()
             self.score_board.prep_score()
 
+            self.score_board.prep_ships()
+
             self.active = True
 
             #清空外星人列表和子弹列表
@@ -202,6 +204,7 @@ class AlienInvasion:
         if self.stats.ship_left > 0 :
             #ship_left 减1
             self.stats.ship_left -= 1
+            self.score_board.prep_ships()
 
             print(f"ship_left: {self.stats.ship_left}")
 

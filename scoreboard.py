@@ -1,7 +1,11 @@
 import pygame.font
+from pygame.sprite import Group
+from ship import Ship
 
 class ScoreBoard:
     def __init__(self, ai_game):
+        self.ai_game = ai_game
+
         self.screen = ai_game.screen
         self.screen_rect = self.screen.get_rect()
         self.settings = ai_game.settings
@@ -16,6 +20,21 @@ class ScoreBoard:
 
         #准备最高分的图像
         self.prep_high_score()
+
+        #准备绘制飞船图像
+        self.prep_ships()
+    
+    def prep_ships(self):
+        self.ships = Group()
+
+        for ship_number in range(self.stats.ship_left):
+            ship = Ship(self.ai_game)
+            ship.rect.x = 500 + ship_number * ship.rect.width
+            ship.rect.y = 10
+            self.ships.add(ship)
+
+
+
 
     def prep_high_score(self):
         high_score = round(self.stats.high_score, -1)
@@ -45,6 +64,7 @@ class ScoreBoard:
     def show_score(self):
         self.screen.blit(self.score_image, self.score_rect)
         self.screen.blit(self.high_score_image, self.high_score_rect)
+        self.ships.draw(self.screen)
 
     def check_high_score(self):
         if self.stats.score > self.stats.high_score:
